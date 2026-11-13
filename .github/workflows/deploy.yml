@@ -3,8 +3,7 @@ name: Build and Deploy NeXkiT
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -21,24 +20,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Extract project ZIP
-        run: unzip -o NeXkiT-React-Project.zip -d .
+      - name: Extract both projects
+        run: |
+          unzip -o NeXkiT-React-Project.zip -d .
+          unzip -o nexkit-advanced-tools.zip -d .
 
-      - name: Install dependencies
-        working-directory: NeXkiT-React
-        run: npm install
+      - name: Build Advanced Tools
+        working-directory: nexkit-advanced-tools
+        run: |
+          npm install
+          VITE_BASE_PATH=/nexkit/tools/ VITE_NEXKIT_HOME_URL=/nexkit/ npm run build
 
-      - name: Build website
+      - name: Integrate Advanced Tools
+        run: |
+          mkdir -p NeXkiT-React/public/tools
+          cp -R nexkit-advanced-tools/dist/. NeXkiT-React/public/tools/
+
+      - name: Build Main Website
         working-directory: NeXkiT-React
-        run: npm run build
+        run: |
+          npm install
+          npm run build
 
       - name: Upload website
         uses: actions/upload-pages-artifact@v3
@@ -53,6 +61,5 @@ jobs:
     needs: build
 
     steps:
-      - name: Deploy to GitHub Pages
+      - uses: actions/deploy-pages@v4
         id: deployment
-        uses: actions/deploy-pages@v4
